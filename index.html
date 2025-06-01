@@ -1,9 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quantum Defense - Mobile</title>
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Quantum Defense - Secure the Superintelligence! A mobile-friendly Three.js game where you defend the vault and upgrade your quantum technologies.">
+    <meta name="keywords" content="Quantum Defense, quantum encryption, Three.js, mobile game, quantum lock, quantum key, quantum code, vault defense, Prometheus, AI game, browser game">
+    <meta name="author" content="Joel Larson">
+    <meta property="og:title" content="Quantum Defense - Mobile Game">
+    <meta property="og:description" content="Defend the vault, upgrade quantum tech, and secure the superintelligence in this mobile-friendly browser game.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://www.cowboyprinter.com/wp-content/uploads/2025/05/artists-rendition.robot-protest.jpg">
+    <meta property="og:url" content="https://cowboyprinter.github.io/TimeKey/">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Quantum Defense - Mobile Game">
+    <meta name="twitter:description" content="Defend the vault and secure the superintelligence in this quantum-themed browser game.">
+    <meta name="twitter:image" content="https://www.cowboyprinter.com/wp-content/uploads/2023/03/Steampunk-Smart-Phone-Copy.gif">
+    <!-- End SEO Meta Tags -->
+        <title>Quantum Defense - Mobile</title>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * {
@@ -16,7 +31,7 @@
         
         body {
             overflow: hidden;
-            background: linear-gradient(135deg, #0f172a, #1e293b);
+            background: linear-gradient(135deg, #0c1527, #1a2438);
             color: #f1f5f9;
             height: 100vh;
             display: flex;
@@ -45,50 +60,54 @@
         .mobile-top-bar {
             display: flex;
             justify-content: space-between;
-            background: rgba(15, 23, 42, 0.8);
-            border-radius: 12px;
-            padding: 10px;
-            margin-bottom: 5px;
+            background: rgba(12, 20, 35, 0.85);
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 8px;
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(94, 234, 212, 0.2);
+            border: 1px solid rgba(94, 234, 212, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
         }
         
         .status-container {
             flex: 1;
-            padding: 8px;
-            background: rgba(30, 41, 59, 0.5);
-            border-radius: 8px;
-            margin: 0 5px;
+            padding: 10px;
+            background: rgba(25, 36, 60, 0.6);
+            border-radius: 12px;
+            margin: 0 6px;
         }
         
         .status-label {
-            font-size: 12px;
-            color: #94a3b8;
-            margin-bottom: 4px;
+            font-size: 13px;
+            color: #a3b8d0;
+            margin-bottom: 6px;
+            font-weight: 500;
         }
         
         .bar-container {
-            height: 10px;
-            background: rgba(30, 41, 59, 0.7);
-            border-radius: 5px;
+            height: 12px;
+            background: rgba(25, 36, 60, 0.8);
+            border-radius: 6px;
             overflow: hidden;
         }
         
         .bar-fill {
             height: 100%;
-            border-radius: 5px;
+            border-radius: 6px;
             transition: width 0.3s ease;
+            box-shadow: 0 0 8px rgba(94, 234, 212, 0.3);
         }
         
         .status-value {
-            font-size: 12px;
+            font-size: 13px;
             text-align: center;
-            margin-top: 3px;
-            font-weight: 600;
+            margin-top: 5px;
+            font-weight: 700;
+            color: #e2f3ff;
         }
         
         #research-bar .bar-fill {
-            background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+            background: linear-gradient(90deg, #0ea5e9, #5eead4);
         }
         
         #integrity-bar .bar-fill {
@@ -98,63 +117,71 @@
         #upgrades-container {
             display: flex;
             justify-content: space-between;
-            background: rgba(15, 23, 42, 0.8);
-            border-radius: 12px;
-            padding: 10px;
+            background: rgba(12, 20, 35, 0.85);
+            border-radius: 16px;
+            padding: 12px;
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(94, 234, 212, 0.2);
+            border: 1px solid rgba(94, 234, 212, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
         }
         
         .upgrade-card {
-            background: rgba(30, 41, 59, 0.7);
-            border-radius: 8px;
-            padding: 8px;
+            background: linear-gradient(145deg, #1e2a4a, #172136);
+            border-radius: 12px;
+            padding: 12px;
             width: 30%;
             text-align: center;
-            border: 1px solid rgba(94, 234, 212, 0.1);
+            border: 1px solid rgba(94, 234, 212, 0.2);
             transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
         
         .upgrade-card.active {
             border-color: #5eead4;
-            box-shadow: 0 0 10px rgba(94, 234, 212, 0.4);
-            transform: translateY(-3px);
+            box-shadow: 0 0 15px rgba(94, 234, 212, 0.5);
+            transform: translateY(-5px);
+            background: linear-gradient(145deg, #223056, #1a2848);
         }
         
         .upgrade-icon {
-            font-size: 20px;
-            margin-bottom: 5px;
+            font-size: 24px;
+            margin-bottom: 8px;
+            text-shadow: 0 0 10px rgba(94, 234, 212, 0.7);
         }
         
         .upgrade-name {
-            font-size: 12px;
-            font-weight: 600;
-            margin-bottom: 3px;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 5px;
             color: #5eead4;
+            text-shadow: 0 0 5px rgba(94, 234, 212, 0.5);
         }
         
         .upgrade-level {
-            font-size: 11px;
-            color: #94a3b8;
+            font-size: 12px;
+            color: #a3b8d0;
+            font-weight: 500;
         }
         
         #mobile-controls {
             position: absolute;
-            bottom: 20px;
+            bottom: 25px;
             left: 0;
             width: 100%;
             display: flex;
             justify-content: center;
             z-index: 20;
+            padding: 0 20px;
+            box-sizing: border-box;
         }
         
         #dpad-container {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             grid-template-rows: repeat(3, 1fr);
-            gap: 8px;
-            width: 140px;
-            height: 140px;
+            gap: 10px;
+            width: 160px;
+            height: 160px;
         }
         
         .dpad-center {
@@ -166,24 +193,31 @@
             align-items: center;
             justify-content: center;
             color: rgba(255, 255, 255, 0.7);
-            font-size: 24px;
+            font-size: 28px;
+            backdrop-filter: blur(4px);
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
         }
         
         .dpad-btn {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(20, 30, 50, 0.7);
             border: none;
-            border-radius: 12px;
+            border-radius: 16px;
             color: white;
-            font-size: 24px;
+            font-size: 28px;
             display: flex;
             align-items: center;
             justify-content: center;
             backdrop-filter: blur(5px);
             touch-action: manipulation;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(94, 234, 212, 0.2);
+            transition: all 0.1s ease;
         }
         
         .dpad-btn:active {
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(30, 45, 75, 0.9);
+            transform: scale(0.95);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
         }
         
         #btn-up {
@@ -216,7 +250,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background: rgba(15, 23, 42, 0.95);
+            background: rgba(10, 15, 30, 0.96);
             z-index: 100;
             opacity: 0;
             pointer-events: none;
@@ -229,147 +263,213 @@
         }
         
         .overlay-content {
-            background: rgba(30, 41, 59, 0.95);
-            border-radius: 20px;
-            padding: 30px 20px;
+            background: linear-gradient(145deg, #1e2a4a, #172136);
+            border-radius: 24px;
+            padding: 35px 25px;
             text-align: center;
             width: 90%;
-            max-width: 400px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            border: 2px solid rgba(94, 234, 212, 0.3);
+            max-width: 450px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(94, 234, 212, 0.4);
         }
         
         .overlay-title {
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 15px;
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 20px;
             background: linear-gradient(90deg, #0ea5e9, #5eead4);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            text-shadow: 0 0 20px rgba(14, 165, 233, 0.4);
         }
         
         .overlay-message {
             font-size: 18px;
-            line-height: 1.5;
-            margin-bottom: 25px;
-            color: #cbd5e1;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            color: #d0e8ff;
         }
         
         .btn {
             background: linear-gradient(90deg, #0ea5e9, #5eead4);
-            color: #0f172a;
+            color: #0a1428;
             border: none;
-            padding: 12px 25px;
-            font-size: 16px;
-            font-weight: 600;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: 700;
             border-radius: 50px;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4);
-            width: 80%;
-            max-width: 250px;
-            margin: 10px auto;
+            box-shadow: 0 6px 20px rgba(14, 165, 233, 0.5);
+            width: 85%;
+            max-width: 280px;
+            margin: 15px auto;
             display: block;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
         }
         
         .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(14, 165, 233, 0.6);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(14, 165, 233, 0.7);
         }
         
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin: 20px 0;
+            gap: 15px;
+            margin: 30px 0;
         }
         
         .stat-card {
-            background: rgba(15, 23, 42, 0.7);
-            border-radius: 10px;
-            padding: 15px;
-            border: 1px solid rgba(94, 234, 212, 0.1);
+            background: linear-gradient(145deg, #1a243f, #141d35);
+            border-radius: 16px;
+            padding: 20px 15px;
+            border: 1px solid rgba(94, 234, 212, 0.2);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
         
         .stat-value {
-            font-size: 24px;
-            font-weight: 700;
+            font-size: 28px;
+            font-weight: 800;
             color: #5eead4;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            text-shadow: 0 0 10px rgba(94, 234, 212, 0.5);
         }
         
         .stat-label {
             font-size: 14px;
-            color: #94a3b8;
+            color: #a3b8d0;
+            font-weight: 500;
         }
         
         .lab-indicator {
             position: absolute;
-            bottom: 180px;
+            bottom: 200px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 14px;
-            background: rgba(15, 23, 42, 0.8);
-            padding: 6px 15px;
-            border-radius: 20px;
+            font-size: 16px;
+            background: rgba(12, 20, 35, 0.9);
+            padding: 10px 25px;
+            border-radius: 30px;
             white-space: nowrap;
             opacity: 0;
             transition: opacity 0.3s ease;
             pointer-events: none;
             z-index: 15;
+            border: 1px solid rgba(94, 234, 212, 0.3);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            color: #5eead4;
+            font-weight: 600;
         }
         
         .lab-indicator.visible {
             opacity: 1;
         }
         
+        /* Safe area adjustments for mobile devices */
+        @supports (padding: max(0px)) {
+            #mobile-controls {
+                bottom: max(25px, env(safe-area-inset-bottom));
+            }
+            
+            #ui-container {
+                padding: max(10px, env(safe-area-inset-top)) 10px 10px;
+            }
+        }
+        
         @media (max-height: 700px) {
             #mobile-controls {
-                bottom: 10px;
+                bottom: 15px;
             }
             
             .dpad-btn, .dpad-center {
-                width: 40px;
-                height: 40px;
-                font-size: 20px;
+                width: 46px;
+                height: 46px;
+                font-size: 24px;
             }
             
             #dpad-container {
-                width: 120px;
-                height: 120px;
+                width: 140px;
+                height: 140px;
             }
             
             .lab-indicator {
-                bottom: 150px;
+                bottom: 170px;
+                font-size: 14px;
+                padding: 8px 20px;
             }
         }
         
         @media (max-height: 600px) {
             .mobile-top-bar {
-                padding: 8px;
+                padding: 10px;
             }
             
             .status-container {
-                padding: 6px;
-            }
-            
-            #upgrades-container {
                 padding: 8px;
             }
             
+            #upgrades-container {
+                padding: 10px;
+            }
+            
             .upgrade-card {
-                padding: 6px;
+                padding: 10px;
             }
             
             .upgrade-icon {
-                font-size: 18px;
+                font-size: 20px;
             }
             
             .lab-indicator {
-                bottom: 140px;
-                font-size: 12px;
+                bottom: 150px;
+                font-size: 13px;
             }
+            
+            #mobile-controls {
+                bottom: 10px;
+            }
+        }
+        
+        /* Landscape orientation adjustments */
+        @media (orientation: landscape) {
+            #ui-container {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                padding: 10px;
+                display: flex;
+                flex-direction: column;
+                z-index: 10;
+                pointer-events: none;
+                flex-grow: 0; /* Added to prevent growing */
+            }
+            
+            .mobile-top-bar {
+                width: 70%;
+                margin-right: 10px;
+            }
+            
+            #upgrades-container {
+                width: 28%;
+                flex-direction: column;
+                height: fit-content;
+                flex-grow: 0; /* Added to prevent growing */
+            }
+            
+            .upgrade-card {
+                width: 100%;
+                margin-bottom: 10px;
+                flex-grow: 0; /* Added to prevent growing */
+            }
+            
+            #mobile-controls {
+                bottom: 15px;
+            }
+            
         }
     </style>
 </head>
@@ -378,7 +478,7 @@
         <div id="ui-container">
             <div class="mobile-top-bar">
                 <div class="status-container">
-                    <div class="status-label">Research</div>
+                    <div class="status-label">Research Progress</div>
                     <div id="research-bar" class="bar-container">
                         <div id="research-bar-fill" class="bar-fill" style="width: 0%"></div>
                     </div>
@@ -477,9 +577,9 @@
         // Game configuration
         const config = {
             // Research
-            MAX_RESEARCH: 1000,
-            RESEARCH_PER_VISIT: 15,
-            RESEARCH_COOLDOWN: 1500, // ms
+            MAX_RESEARCH: 500,
+            RESEARCH_PER_VISIT: 3,
+            RESEARCH_COOLDOWN: 6000, // ms
             
             // Vault
             MAX_VAULT_INTEGRITY: 500,
@@ -487,8 +587,8 @@
             
             // Enemy
             ENEMY_SPAWN_INTERVAL: 2000, // ms
-            ENEMY_SPEED_MIN: 0.3,
-            ENEMY_SPEED_MAX: 0.8,
+            ENEMY_SPEED_MIN: 0.4,
+            ENEMY_SPEED_MAX: 0.9,
             
             // Upgrades
             UPGRADE_EFFECTS: {
@@ -542,18 +642,18 @@
         function initScene() {
             // Create scene
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0f172a);
-            scene.fog = new THREE.Fog(0x0f172a, 20, 50);
+            scene.background = new THREE.Color(0x0c1527);
+            scene.fog = new THREE.Fog(0x0c1527, 20, 50);
             
             // Create camera
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 15, 15);
+            camera.position.set(0, 18, 20); // Adjusted to show more of the play area
             camera.lookAt(0, 0, 0);
             
             // Create renderer
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit for performance
             renderer.shadowMap.enabled = true;
             document.getElementById('game-container').appendChild(renderer.domElement);
             
@@ -569,7 +669,7 @@
             // Add ground
             const groundGeometry = new THREE.PlaneGeometry(50, 50);
             const groundMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x1e293b,
+                color: 0x1a2438,
                 roughness: 0.8,
                 metalness: 0.2
             });
@@ -579,7 +679,7 @@
             scene.add(ground);
             
             // Create grid helper
-            const gridHelper = new THREE.GridHelper(50, 20, 0x334155, 0x1e293b);
+            const gridHelper = new THREE.GridHelper(50, 20, 0x2a3a5a, 0x1a2438);
             scene.add(gridHelper);
             
             // Create game objects
@@ -598,7 +698,7 @@
             // Vault base
             const vaultGeometry = new THREE.CylinderGeometry(3, 3, 1, 32);
             const vaultMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x64748b,
+                color: 0x54628b,
                 metalness: 0.5,
                 roughness: 0.3
             });
@@ -682,7 +782,9 @@
             const material = new THREE.MeshStandardMaterial({ 
                 color: 0x0ea5e9,
                 metalness: 0.4,
-                roughness: 0.3
+                roughness: 0.3,
+                emissive: 0x0a6a9e,
+                emissiveIntensity: 0.3
             });
             player = new THREE.Mesh(geometry, material);
             player.position.set(0, 1, 15);
@@ -849,10 +951,12 @@
                         enemy.frozen = true;
                         enemy.frozenTime = now;
                         enemy.mesh.material.color.set(0x3b82f6); // Change to blue
+                        enemy.mesh.material.emissive.set(0x1e5eb8);
                     }
                 } else if (enemy.frozen) {
                     enemy.frozen = false;
                     enemy.mesh.material.color.set(0xef4444); // Change back to red
+                    enemy.mesh.material.emissive.set(0xef4444);
                 }
                 
                 // Only move if not frozen
@@ -1038,7 +1142,7 @@
             
             // Update camera to follow player
             camera.position.x = player.position.x;
-            camera.position.z = player.position.z + 15;
+            camera.position.z = player.position.z + 18; // Adjusted to show more of the play area
             camera.lookAt(player.position.x, 0, player.position.z);
             
             // Render scene
