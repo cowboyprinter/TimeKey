@@ -556,628 +556,621 @@
         </div>
     </div>
 
-    <script>
-        
-        // Game constants and state
-        const GAME_STATES = {
-            READY: 0,
-            PLAYING: 1,
-            GAME_OVER: 2,
-            VICTORY: 3
-        };
+   <script>
+    // Game constants and state
+    const GAME_STATES = {
+        READY: 0,
+        PLAYING: 1,
+        GAME_OVER: 2,
+        VICTORY: 3
+    };
 
-        const LAB_TYPES = {
-            LOCK: 0,
-            KEY: 1,
-            CODE: 2
-        };
-        
-        const LAB_NAMES = {
-            [LAB_TYPES.LOCK]: "Quantum Lock",
-            [LAB_TYPES.KEY]: "Quantum Key",
-            [LAB_TYPES.CODE]: "Quantum Code"
-        };
+    const LAB_TYPES = {
+        LOCK: 0,
+        KEY: 1,
+        CODE: 2
+    };
+    
+    const LAB_NAMES = {
+        [LAB_TYPES.LOCK]: "Quantum Lock",
+        [LAB_TYPES.KEY]: "Quantum Key",
+        [LAB_TYPES.CODE]: "Quantum Code"
+    };
 
-        // Game configuration
-        const config = {
-            // Research
-            MAX_RESEARCH: 500,
-            RESEARCH_PER_VISIT: 3,
-            RESEARCH_COOLDOWN: 6000, // ms
-            
-            // Vault
-            MAX_VAULT_INTEGRITY: 500,
-            ENEMY_DAMAGE: 25,
-            
-            // Enemy
-            ENEMY_SPAWN_INTERVAL: 2000, // ms
-            ENEMY_SPEED_MIN: 0.4,
-            ENEMY_SPEED_MAX: 0.9,
-            
-            // Upgrades
-            UPGRADE_EFFECTS: {
-                LOCK: level => 0.2 * level, // Slow effect (20% per level)
-                KEY: level => 0.15 * level, // Kill chance (15% per level)
-                CODE: level => 0.25 * level  // Freeze duration (0.25s per level)
+    // --- LAB_MESSAGES and related vars now in GLOBAL scope ---
+    const LAB_MESSAGES = {
+        [LAB_TYPES.LOCK]: [
+            "Creating Time Lock...",
+            "Time mirroring...",
+            "Reverse Time established...",
+            "Stand by...",
+            "Report to Key Lab..."
+        ],
+        [LAB_TYPES.KEY]: [
+            "Creating Time Key...",
+            "Set Time Crystals...",
+            "Key stored in reverse time...",
+            "Stand by...",
+            "Report to Code Lab..."
+        ],
+        [LAB_TYPES.CODE]: [
+            "Import Time Travel code...",
+            "Importing multiverses...",
+            "Resolving timelines...",
+            "Stand by...",
+            "Examine Vault Core..."
+        ]
+    };
+    let currentMessageSequence = [];
+    let currentMessageIndex = 0;
+    let messageDisplayEndTime = 0;
+    const MESSAGE_DURATION = 2200; // ms (2.2 seconds per message for readability)
+    let activeLabIndicatorTimeout = 0; 
+    // --- End of global message vars ---
+
+    // --- Global colors for vault core emissive transition ---
+    const VAULT_START_EMISSIVE_COLOR = new THREE.Color(0x0ea5e9); // Calm blue/cyan
+    const VAULT_END_EMISSIVE_COLOR = new THREE.Color(0xFFFF33);   // Bright, hopeful yellow
+    let currentVaultEmissiveColor = new THREE.Color().copy(VAULT_START_EMISSIVE_COLOR); // Init with start color
+    // --- End of global color vars ---
+
+    // Game configuration
+    const config = {
+        MAX_RESEARCH: 500, // Was 1000, 500 for faster testing
+        RESEARCH_PER_VISIT: 20, // Increased for faster testing of upgrades
+        RESEARCH_COOLDOWN: 3000, // ms, slightly shorter for testing
+        MAX_VAULT_INTEGRITY: 500,
+        ENEMY_DAMAGE: 55,
+        ENEMY_SPAWN_INTERVAL: 1800, // Initial spawn interval
+        ENEMY_SPEED_MIN: 0.1,
+        ENEMY_SPEED_MAX: 1.9,
+        UPGRADE_EFFECTS: {
+            LOCK: level => 0.10 * level, 
+            KEY: level => 0.11 * level, 
+            CODE: level => 0.18 * level 
+        }
+        // Config for second wave (will be added later if needed or integrated into enemy spawning)
+    };
+
+    // Game state
+    let gameState = GAME_STATES.READY;
+    let researchProgress = 0;
+    let vaultIntegrity = config.MAX_VAULT_INTEGRITY;
+    let lastEnemySpawn = 0;
+    let lastFreezeTime = 0;
+    let freezeDuration = 0;
+    
+    let upgrades = { lock: 0, key: 0, code: 0 };
+
+    // Three.js variables
+    let scene, camera, renderer;
+    let player, vault, vaultCore, labs = [], enemies = []; // vaultCore added
+
+    // DOM references
+    const researchBar = document.getElementById('research-bar-fill');
+    const researchValue = document.getElementById('research-value');
+    const integrityBar = document.getElementById('integrity-bar-fill');
+    const integrityValue = document.getElementById('integrity-value');
+    const lockLevel = document.getElementById('lock-level');
+    const keyLevel = document.getElementById('key-level');
+    const codeLevel = document.getElementById('code-level');
+    const lockUpgrade = document.getElementById('lock-upgrade');
+    const keyUpgrade = document.getElementById('key-upgrade');
+    const codeUpgrade = document.getElementById('code-upgrade');
+    const gameOverlay = document.getElementById('game-overlay');
+    const finalResearch = document.getElementById('final-research');
+    const finalIntegrity = document.getElementById('final-integrity');
+    const finalLevel = document.getElementById('final-level');
+    const outcomeMessage = document.getElementById('outcome-message');
+    const restartBtn = document.getElementById('restart-btn');
+    const labIndicator = document.getElementById('lab-indicator');
+
+    // --- `updateLabMessages` function defined in GLOBAL scope ---
+    function updateLabMessages(currentTime) {
+        if (currentMessageSequence.length > 0 && currentMessageIndex < currentMessageSequence.length) {
+            if (currentTime >= messageDisplayEndTime) {
+                labIndicator.textContent = currentMessageSequence[currentMessageIndex];
+                labIndicator.classList.add('visible');
+                currentMessageIndex++;
+                messageDisplayEndTime = currentTime + MESSAGE_DURATION;
+
+                if (activeLabIndicatorTimeout) {
+                    clearTimeout(activeLabIndicatorTimeout);
+                    activeLabIndicatorTimeout = null;
+                }
+
+                if (currentMessageIndex >= currentMessageSequence.length) {
+                    activeLabIndicatorTimeout = setTimeout(() => {
+                        labIndicator.classList.remove('visible');
+                        currentMessageSequence = []; 
+                        currentMessageIndex = 0;
+                        activeLabIndicatorTimeout = null; 
+                    }, MESSAGE_DURATION);
+                }
             }
-        };
+        }
+    }
+    // --- End of `updateLabMessages` ---
 
-        // Game state
-        let gameState = GAME_STATES.READY;
-        let researchProgress = 0;
-        let vaultIntegrity = config.MAX_VAULT_INTEGRITY;
-        let lastResearchTime = 0;
-        let lastEnemySpawn = 0;
-        let lastFreezeTime = 0;
-        let freezeDuration = 0;
-        
-        // Upgrade levels
-        let upgrades = {
-            lock: 0,
-            key: 0,
-            code: 0
-        };
-
-        // Three.js variables
-        let scene, camera, renderer;
-        let player, vault, labs = [], enemies = [];
-        let labMeshes = [], enemyMeshes = [];
-
-        // DOM references
-        const researchBar = document.getElementById('research-bar-fill');
-        const researchValue = document.getElementById('research-value');
-        const integrityBar = document.getElementById('integrity-bar-fill');
-        const integrityValue = document.getElementById('integrity-value');
-        const lockLevel = document.getElementById('lock-level');
-        const keyLevel = document.getElementById('key-level');
-        const codeLevel = document.getElementById('code-level');
-        const lockUpgrade = document.getElementById('lock-upgrade');
-        const keyUpgrade = document.getElementById('key-upgrade');
-        const codeUpgrade = document.getElementById('code-upgrade');
-        const gameOverlay = document.getElementById('game-overlay');
-        const finalResearch = document.getElementById('final-research');
-        const finalIntegrity = document.getElementById('final-integrity');
-        const finalLevel = document.getElementById('final-level');
-        const outcomeMessage = document.getElementById('outcome-message');
-        const restartBtn = document.getElementById('restart-btn');
-        const labIndicator = document.getElementById('lab-indicator');
-
-        // Initialize Three.js scene
-        function initScene() {// In your JavaScript, perhaps in initScene or onWindowResize
+    function initScene() {
         const gameContainer = document.getElementById('game-container');
-        function setGameContainerHeight() {
+        function setGameContainerHeightAndResizeThree() { // Renamed for clarity
             gameContainer.style.height = `${window.innerHeight}px`;
+            if (camera) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+            }
+            if (renderer) {
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
         }
-        window.addEventListener('resize', setGameContainerHeight);
-        window.addEventListener('orientationchange', setGameContainerHeight); // Also on orientation change
-        setGameContainerHeight(); // Initial set
+        window.addEventListener('resize', setGameContainerHeightAndResizeThree);
+        window.addEventListener('orientationchange', setGameContainerHeightAndResizeThree);
+        setGameContainerHeightAndResizeThree(); 
         
-            // Create scene
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0c1527);
-            scene.fog = new THREE.Fog(0x0c1527, 20, 50);
-            
-            // Create camera
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 18, 20); // Adjusted to show more of the play area
-            camera.lookAt(0, 0, 0);
-            
-            // Create renderer
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit for performance
-            renderer.shadowMap.enabled = true;
-            document.getElementById('game-container').appendChild(renderer.domElement);
-            
-            // Add lighting
-            const ambientLight = new THREE.AmbientLight(0x404040);
-            scene.add(ambientLight);
-            
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-            directionalLight.position.set(10, 20, 15);
-            directionalLight.castShadow = true;
-            scene.add(directionalLight);
-            
-            // Add ground
-            const groundGeometry = new THREE.PlaneGeometry(50, 50);
-            const groundMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x1a2438,
-                roughness: 0.8,
-                metalness: 0.2
-            });
-            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-            ground.rotation.x = -Math.PI / 2;
-            ground.receiveShadow = true;
-            scene.add(ground);
-            
-            // Create grid helper
-            const gridHelper = new THREE.GridHelper(50, 20, 0x2a3a5a, 0x1a2438);
-            scene.add(gridHelper);
-            
-            // Create game objects
-            createVault();
-            createLabs();
-            createPlayer();
-            
-            // Handle window resize
-            window.addEventListener('resize', onWindowResize);
-            
-            // Start game loop
-            animate();
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0c1527);
+        scene.fog = new THREE.Fog(0x0c1527, 30, 70); // Adjusted fog based on camera
+        
+        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000); // Slightly less FOV
+        camera.position.set(0, 22, 25); // Camera position for good overview
+        camera.lookAt(0, 0, 0);
+        
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
+        document.getElementById('game-container').appendChild(renderer.domElement);
+        
+        const ambientLight = new THREE.AmbientLight(0x707080); // Brighter ambient
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        directionalLight.position.set(15, 30, 20); // Adjusted light position
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 1024; 
+        directionalLight.shadow.mapSize.height = 1024;
+        directionalLight.shadow.camera.near = 0.5;    
+        directionalLight.shadow.camera.far = 100;  
+        // Optional: Adjust shadow camera bounds for better shadow quality if needed
+        // directionalLight.shadow.camera.left = -30;
+        // directionalLight.shadow.camera.right = 30;
+        // directionalLight.shadow.camera.top = 30;
+        // directionalLight.shadow.camera.bottom = -30;
+        scene.add(directionalLight);
+        
+        const groundGeometry = new THREE.PlaneGeometry(60, 60); 
+        const groundMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x1a2438, roughness: 0.95, metalness: 0.05 
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+        
+        const gridHelper = new THREE.GridHelper(60, 30, 0x2a3a5a, 0x1a2438); // Adjusted grid
+        scene.add(gridHelper);
+        
+        createVault();
+        createLabs();
+        createPlayer();
+        
+        animate(); // Start the single, correct animate loop
+    }
+
+    function createVault() {
+        const vaultBaseGeometry = new THREE.CylinderGeometry(3.5, 3.5, 1.5, 32);
+        const vaultBaseMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x54628b, metalness: 0.6, roughness: 0.2
+        });
+        vault = new THREE.Mesh(vaultBaseGeometry, vaultBaseMaterial);
+        vault.position.set(0, 0.75, 0); 
+        vault.castShadow = true;
+        vault.receiveShadow = true;
+        scene.add(vault);
+        
+        const coreGeometry = new THREE.SphereGeometry(1.8, 32, 32);
+        const coreMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x5eead4, // This is the base color of the sphere material
+            emissive: VAULT_START_EMISSIVE_COLOR.clone(), // Initial emissive color
+            emissiveIntensity: 0.2, // Initial base for pulse animation
+            transparent: true, opacity: 0.8
+        });
+        vaultCore = new THREE.Mesh(coreGeometry, coreMaterial); // Assign to global vaultCore
+        vaultCore.position.y = 1.5; // Position relative to vault base's top (since vault base height is 1.5, its center is 0.75)
+        vault.add(vaultCore); // Add core as a child of the vault base
+    }
+
+    function createLabs() {
+        labs = []; 
+        const labPositions = [
+            { x: -15, z: 0, type: LAB_TYPES.LOCK, color: 0x10b981, symbol: '🔒' },
+            { x: 15, z: 0, type: LAB_TYPES.KEY, color: 0xf59e0b, symbol: '🔑' },
+            { x: 0, z: -15, type: LAB_TYPES.CODE, color: 0x8b5cf6, symbol: '💻' }
+        ];
+        labPositions.forEach(pos => {
+            const labMesh = createLabMesh(pos.x, 1.5, pos.z, pos.color, pos.symbol); // y=1.5 for lab base
+            labs.push({ type: pos.type, mesh: labMesh, lastVisit: 0 });
+        });
+    }
+
+    function createLabMesh(x, y, z, color, symbol) { // Renamed to avoid confusion with createLabs array
+        const labGeometry = new THREE.BoxGeometry(5, 3, 5);
+        const labMaterial = new THREE.MeshStandardMaterial({ 
+            color: color, metalness: 0.3, roughness: 0.4
+        });
+        const lab = new THREE.Mesh(labGeometry, labMaterial);
+        lab.position.set(x, y, z); // y is the center of the lab box
+        lab.castShadow = true;
+        lab.receiveShadow = true;
+        scene.add(lab);
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = 128; canvas.height = 128;
+        const context = canvas.getContext('2d');
+        context.fillStyle = '#FFFFFF'; context.font = 'bold 90px Arial'; 
+        context.textAlign = 'center'; context.textBaseline = 'middle';
+        context.fillText(symbol, 64, 70); 
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        const symbolMaterial = new THREE.MeshStandardMaterial({ 
+            map: texture, transparent: true, roughness: 0.7, metalness: 0.1, side: THREE.DoubleSide
+        });
+        
+        const symbolGeometry = new THREE.PlaneGeometry(3, 3); // Slightly larger symbol plane
+        const symbolMesh = new THREE.Mesh(symbolGeometry, symbolMaterial);
+        symbolMesh.position.y = 1.6; // Position it slightly above the lab's center
+        // To make symbol face camera if camera moves around it (billboarding):
+        // symbolMesh.lookAt(camera.position); // Call this in animate, or make it a Sprite
+        // For now, keeping it static relative to lab:
+        symbolMesh.rotation.x = -Math.PI / 4; // Angled slightly
+        lab.add(symbolMesh); 
+        
+        return lab;
+    }
+
+    function createPlayer() {
+        const geometry = new THREE.CylinderGeometry(0.7, 0.7, 2.2, 16);
+        const material = new THREE.MeshStandardMaterial({ 
+            color: 0x0ea5e9, metalness: 0.4, roughness: 0.3,
+            emissive: 0x0a6a9e, emissiveIntensity: 0.3
+        });
+        player = new THREE.Mesh(geometry, material);
+        player.position.set(0, 1.1, 18); 
+        player.castShadow = true;
+        player.receiveShadow = true; 
+        scene.add(player);
+        
+        const indicatorGeometry = new THREE.ConeGeometry(0.4, 1.0, 4);
+        const indicatorMaterial = new THREE.MeshBasicMaterial({ color: 0x34d399 });
+        const indicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
+        indicator.position.y = 1.5; 
+        indicator.rotation.x = Math.PI;
+        player.add(indicator);
+    }
+
+    function spawnEnemy() {
+        const side = Math.floor(Math.random() * 4); 
+        let x, z;
+        const spawnDist = 32; // Spawn further out
+        switch(side) {
+            case 0: x = Math.random() * 56 - 28; z = -spawnDist; break; // Adjusted for larger ground
+            case 1: x = spawnDist; z = Math.random() * 56 - 28; break;
+            case 2: x = Math.random() * 56 - 28; z = spawnDist; break;
+            case 3: x = -spawnDist; z = Math.random() * 56 - 28; break;
+        }
+        
+        const geometry = new THREE.SphereGeometry(0.7, 16, 16);
+        const material = new THREE.MeshStandardMaterial({ 
+            color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.3
+        });
+        const enemyMesh = new THREE.Mesh(geometry, material);
+        enemyMesh.position.set(x, 0.7, z); 
+        enemyMesh.castShadow = true;
+        scene.add(enemyMesh);
+        
+        enemies.push({
+            mesh: enemyMesh,
+            speed: Math.random() * (config.ENEMY_SPEED_MAX - config.ENEMY_SPEED_MIN) + config.ENEMY_SPEED_MIN,
+            frozen: false,
+            // frozenTime: 0 // Not actively used if just checking freezeActive flag
+        });
+    }
+
+    function updatePlayer(delta) {
+        if (gameState !== GAME_STATES.PLAYING || !player) return; // Added !player check
+        
+        const speed = 12 * delta; 
+        let moved = false;
+        const moveDirection = { x: 0, z: 0 };
+
+        if (keys['arrowup'] || keys['w'] || keys['up']) { 
+            moveDirection.z = -1; moved = true;
+        }
+        if (keys['arrowdown'] || keys['s'] || keys['down']) {
+            moveDirection.z = 1; moved = true;
+        }
+        if (keys['arrowleft'] || keys['a'] || keys['left']) {
+            moveDirection.x = -1; moved = true;
+        }
+        if (keys['arrowright'] || keys['d'] || keys['right']) {
+            moveDirection.x = 1; moved = true;
         }
 
-        function createVault() {
-            // Vault base
-            const vaultGeometry = new THREE.CylinderGeometry(3, 3, 1, 32);
-            const vaultMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x54628b,
-                metalness: 0.5,
-                roughness: 0.3
-            });
-            vault = new THREE.Mesh(vaultGeometry, vaultMaterial);
-            vault.position.y = 0.5;
-            vault.castShadow = true;
-            vault.receiveShadow = true;
-            scene.add(vault);
-            
-            // Vault core (quantum energy)
-            const coreGeometry = new THREE.SphereGeometry(1.5, 32, 32);
-            const coreMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x5eead4,
-                emissive: 0x0ea5e9,
-                emissiveIntensity: 0.8,
-                transparent: true,
-                opacity: 0.7
-            });
-            const core = new THREE.Mesh(coreGeometry, coreMaterial);
-            core.position.y = 2;
-            scene.add(core);
+        if (moved) {
+            player.position.x += moveDirection.x * speed;
+            player.position.z += moveDirection.z * speed;
+            const angle = Math.atan2(moveDirection.x, moveDirection.z);
+            player.rotation.y = angle;
         }
-
-        function createLabs() {
-            // Quantum Lock Lab (Materials)
-            const lockLab = createLab(-12, 0, 12, 0x10b981, '🔒');
-            labs.push({ type: LAB_TYPES.LOCK, mesh: lockLab, lastVisit: 0 });
-            
-            // Quantum Key Lab (Computer)
-            const keyLab = createLab(12, 0, 12, 0xf59e0b, '🔑');
-            labs.push({ type: LAB_TYPES.KEY, mesh: keyLab, lastVisit: 0 });
-            
-            // Quantum Code Lab (University)
-            const codeLab = createLab(0, 0, -12, 0x8b5cf6, '💻');
-            labs.push({ type: LAB_TYPES.CODE, mesh: codeLab, lastVisit: 0 });
-        }
-
-        function createLab(x, y, z, color, symbol) {
-            const labGeometry = new THREE.BoxGeometry(4, 2, 4);
-            const labMaterial = new THREE.MeshStandardMaterial({ 
-                color: color,
-                metalness: 0.3,
-                roughness: 0.4
-            });
-            const lab = new THREE.Mesh(labGeometry, labMaterial);
-            lab.position.set(x, 1, z);
-            lab.castShadow = true;
-            lab.receiveShadow = true;
-            scene.add(lab);
-            
-            // Symbol indicator
-            const canvas = document.createElement('canvas');
-            canvas.width = 128;
-            canvas.height = 128;
-            const context = canvas.getContext('2d');
-            
-            context.fillStyle = '#ffffff';
-            context.font = '100px Arial';
-            context.textAlign = 'center';
-            context.textBaseline = 'middle';
-            context.fillText(symbol, 64, 64);
-            
-            const texture = new THREE.CanvasTexture(canvas);
-            const symbolMaterial = new THREE.MeshBasicMaterial({
-                map: texture,
-                transparent: true,
-                side: THREE.DoubleSide
-            });
-            
-            const symbolGeometry = new THREE.PlaneGeometry(2, 2);
-            const symbolMesh = new THREE.Mesh(symbolGeometry, symbolMaterial);
-            symbolMesh.position.set(x, 3, z);
-            symbolMesh.rotation.x = -Math.PI / 2;
-            scene.add(symbolMesh);
-            
-            return lab;
-        }
-
-        function createPlayer() {
-            const geometry = new THREE.CylinderGeometry(0.8, 0.8, 2, 16);
-            const material = new THREE.MeshStandardMaterial({ 
-                color: 0x0ea5e9,
-                metalness: 0.4,
-                roughness: 0.3,
-                emissive: 0x0a6a9e,
-                emissiveIntensity: 0.3
-            });
-            player = new THREE.Mesh(geometry, material);
-            player.position.set(0, 1, 15);
-            player.castShadow = true;
-            player.receiveShadow = true;
-            scene.add(player);
-            
-            // Player indicator
-            const indicatorGeometry = new THREE.ConeGeometry(0.5, 1.5, 4);
-            const indicatorMaterial = new THREE.MeshBasicMaterial({ color: 0x0ea5e9 });
-            const indicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
-            indicator.position.y = 2.5;
-            indicator.rotation.x = Math.PI;
-            player.add(indicator);
-        }
-
-        function spawnEnemy() {
-            // Determine spawn position (off-screen)
-            const side = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
-            let x, z;
-            
-            switch(side) {
-                case 0: // Top
-                    x = Math.random() * 40 - 20;
-                    z = -25;
-                    break;
-                case 1: // Right
-                    x = 25;
-                    z = Math.random() * 40 - 20;
-                    break;
-                case 2: // Bottom
-                    x = Math.random() * 40 - 20;
-                    z = 25;
-                    break;
-                case 3: // Left
-                    x = -25;
-                    z = Math.random() * 40 - 20;
-                    break;
-            }
-            
-            // Create enemy
-            const geometry = new THREE.SphereGeometry(0.8, 16, 16);
-            const material = new THREE.MeshStandardMaterial({ 
-                color: 0xef4444,
-                emissive: 0xef4444,
-                emissiveIntensity: 0.3
-            });
-            const enemy = new THREE.Mesh(geometry, material);
-            enemy.position.set(x, 0.8, z);
-            enemy.castShadow = true;
-            enemy.receiveShadow = true;
-            scene.add(enemy);
-            
-            // Store enemy data
-            enemies.push({
-                mesh: enemy,
-                speed: Math.random() * (config.ENEMY_SPEED_MAX - config.ENEMY_SPEED_MIN) + config.ENEMY_SPEED_MIN,
-                frozen: false,
-                frozenTime: 0
-            });
-        }
-
-        function updatePlayer(delta) {
-            if (gameState !== GAME_STATES.PLAYING) return;
-            
-            // Movement speed
-            const speed = 10 * delta;
-            
-            // Handle keyboard input
-            if (keys['ArrowUp'] || keys['w'] || keys['up']) {
-                player.position.z -= speed;
-            }
-            if (keys['ArrowDown'] || keys['s'] || keys['down']) {
-                player.position.z += speed;
-            }
-            if (keys['ArrowLeft'] || keys['a'] || keys['left']) {
-                player.position.x -= speed;
-            }
-            if (keys['ArrowRight'] || keys['d'] || keys['right']) {
-                player.position.x += speed;
-            }
-            
-            // Constrain player to play area
-            player.position.x = Math.max(-20, Math.min(20, player.position.x));
-            player.position.z = Math.max(-20, Math.min(20, player.position.z));
-            
-            // Rotate player to face movement direction
-            if (keys['ArrowUp'] || keys['w'] || keys['up'] || keys['ArrowDown'] || keys['s'] || keys['down'] || 
-                keys['ArrowLeft'] || keys['a'] || keys['left'] || keys['ArrowRight'] || keys['d'] || keys['right']) {
-                const angle = Math.atan2(
-                    (keys['ArrowLeft'] || keys['a'] || keys['left'] ? 1 : 0) - (keys['ArrowRight'] || keys['d'] || keys['right'] ? 1 : 0),
-                    (keys['ArrowUp'] || keys['w'] || keys['up'] ? 1 : 0) - (keys['ArrowDown'] || keys['s'] || keys['down'] ? 1 : 0)
-                );
-                player.rotation.y = angle;
-            }
-            
-            // Check for lab collisions
-            const now = Date.now();
-            const playerPos = player.position;
-            
-            labs.forEach(lab => {
-                const distance = playerPos.distanceTo(lab.mesh.position);
+        
+        const playAreaHalfSize = 28; // For 60x60 ground
+        player.position.x = Math.max(-playAreaHalfSize, Math.min(playAreaHalfSize, player.position.x));
+        player.position.z = Math.max(-playAreaHalfSize, Math.min(playAreaHalfSize, player.position.z));
+        
+        const now = Date.now();
+        const playerPos = player.position;
+        
+        labs.forEach(lab => {
+            if (!lab.mesh) return; // Safety check
+            const distance = playerPos.distanceTo(lab.mesh.position);
+            if (distance < 4.5 && now - lab.lastVisit > config.RESEARCH_COOLDOWN) {
+                lab.lastVisit = now;
+                researchProgress = Math.min(config.MAX_RESEARCH, researchProgress + config.RESEARCH_PER_VISIT);
                 
-                if (distance < 4 && now - lab.lastVisit > config.RESEARCH_COOLDOWN) {
-                    lab.lastVisit = now;
-                    
-                    // Update research progress
-                    researchProgress = Math.min(config.MAX_RESEARCH, researchProgress + config.RESEARCH_PER_VISIT);
-                    
-                    // Update upgrade level
-                    switch(lab.type) {
-                        case LAB_TYPES.LOCK:
-                            upgrades.lock++;
-                            lockLevel.textContent = `Level ${upgrades.lock}`;
-                            break;
-                        case LAB_TYPES.KEY:
-                            upgrades.key++;
-                            keyLevel.textContent = `Level ${upgrades.key}`;
-                            break;
-                        case LAB_TYPES.CODE:
-                            upgrades.code++;
-                            codeLevel.textContent = `Level ${upgrades.code}`;
-                            
-                            // Activate freeze effect
-                            freezeDuration = config.UPGRADE_EFFECTS.CODE(upgrades.code);
-                            lastFreezeTime = now;
-                            break;
-                    }
-                    
-                    // Show lab indicator
-                    labIndicator.textContent = `Collecting ${LAB_NAMES[lab.type]}...`;
-                    labIndicator.classList.add('visible');
-                    setTimeout(() => labIndicator.classList.remove('visible'), 1500);
-                    
-                    // Update UI
-                    updateUI();
-                    
-                    // Flash the upgrade card
-                    const card = lab.type === LAB_TYPES.LOCK ? lockUpgrade : 
-                                lab.type === LAB_TYPES.KEY ? keyUpgrade : codeUpgrade;
+                switch(lab.type) {
+                    case LAB_TYPES.LOCK: upgrades.lock++; lockLevel.textContent = `Level ${upgrades.lock}`; break;
+                    case LAB_TYPES.KEY: upgrades.key++; keyLevel.textContent = `Level ${upgrades.key}`; break;
+                    case LAB_TYPES.CODE: 
+                        upgrades.code++; codeLevel.textContent = `Level ${upgrades.code}`;
+                        freezeDuration = config.UPGRADE_EFFECTS.CODE(upgrades.code);
+                        lastFreezeTime = now;
+                        break;
+                }
+                
+                if (LAB_MESSAGES[lab.type] && LAB_MESSAGES[lab.type].length > 0) {
+                    if (activeLabIndicatorTimeout) clearTimeout(activeLabIndicatorTimeout);
+                    currentMessageSequence = LAB_MESSAGES[lab.type];
+                    currentMessageIndex = 0;
+                    messageDisplayEndTime = now -1; // Trigger first message immediately
+                }
+                
+                updateUI();
+                
+                const cardId = lab.type === LAB_TYPES.LOCK ? 'lock-upgrade' : 
+                               lab.type === LAB_TYPES.KEY ? 'key-upgrade' : 'code-upgrade';
+                const card = document.getElementById(cardId);
+                if (card) {
                     card.classList.add('active');
                     setTimeout(() => card.classList.remove('active'), 1000);
-                    
-                    // Check for win condition
-                    if (researchProgress >= config.MAX_RESEARCH) {
-                        endGame(true);
-                    }
                 }
-            });
-        }
+                
+                if (researchProgress >= config.MAX_RESEARCH) {
+                    endGame(true);
+                }
+            }
+        });
+    }
 
-        function updateEnemies(delta) {
-            if (gameState !== GAME_STATES.PLAYING) return;
+    function updateEnemies(delta) {
+        if (gameState !== GAME_STATES.PLAYING) return;
+        
+        const now = Date.now();
+        const freezeActive = (now - lastFreezeTime) < (freezeDuration * 1000);
+        
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            const enemy = enemies[i];
+            if (!enemy.mesh) { // Safety check if mesh was somehow removed improperly
+                enemies.splice(i, 1);
+                continue;
+            }
             
-            const now = Date.now();
-            const freezeActive = (now - lastFreezeTime) < (freezeDuration * 1000);
-            
-            for (let i = enemies.length - 1; i >= 0; i--) {
-                const enemy = enemies[i];
-                
-                // Apply freeze effect
-                if (freezeActive) {
-                    if (!enemy.frozen) {
-                        enemy.frozen = true;
-                        enemy.frozenTime = now;
-                        enemy.mesh.material.color.set(0x3b82f6); // Change to blue
-                        enemy.mesh.material.emissive.set(0x1e5eb8);
-                    }
-                } else if (enemy.frozen) {
-                    enemy.frozen = false;
-                    enemy.mesh.material.color.set(0xef4444); // Change back to red
-                    enemy.mesh.material.emissive.set(0xef4444);
-                }
-                
-                // Only move if not frozen
+            if (freezeActive) {
                 if (!enemy.frozen) {
-                    // Move toward vault
-                    const direction = new THREE.Vector3(0, 0, 0).sub(enemy.mesh.position).normalize();
-                    enemy.mesh.position.add(direction.multiplyScalar(enemy.speed * delta * (1 - config.UPGRADE_EFFECTS.LOCK(upgrades.lock))));
-                    
-                    // Check if enemy reached vault
-                    if (enemy.mesh.position.distanceTo(vault.position) < 4) {
-                        // Apply key upgrade effect (chance to eliminate attacker)
-                        const eliminateChance = config.UPGRADE_EFFECTS.KEY(upgrades.key);
-                        if (Math.random() > eliminateChance) {
-                            vaultIntegrity -= config.ENEMY_DAMAGE;
-                            updateUI();
-                            
-                            if (vaultIntegrity <= 0) {
-                                vaultIntegrity = 0;
-                                endGame(false);
-                            }
-                        }
-                        
-                        // Remove enemy
-                        scene.remove(enemy.mesh);
-                        enemies.splice(i, 1);
-                        continue;
-                    }
+                    enemy.frozen = true;
+                    enemy.mesh.material.color.set(0x3b82f6); 
+                    enemy.mesh.material.emissive.set(0x1e5eb8);
                 }
-            }
-        }
-
-        function updateUI() {
-            // Update research bar
-            const researchPercent = (researchProgress / config.MAX_RESEARCH) * 100;
-            researchBar.style.width = `${researchPercent}%`;
-            researchValue.textContent = `${researchProgress}/${config.MAX_RESEARCH}`;
-            
-            // Update integrity bar
-            const integrityPercent = (vaultIntegrity / config.MAX_VAULT_INTEGRITY) * 100;
-            integrityBar.style.width = `${integrityPercent}%`;
-            integrityValue.textContent = `${vaultIntegrity}/${config.MAX_VAULT_INTEGRITY}`;
-        }
-
-        function endGame(isVictory) {
-            gameState = isVictory ? GAME_STATES.VICTORY : GAME_STATES.GAME_OVER;
-            
-            // Update overlay content
-            finalResearch.textContent = `${Math.round((researchProgress / config.MAX_RESEARCH) * 100)}%`;
-            finalIntegrity.textContent = `${Math.round((vaultIntegrity / config.MAX_VAULT_INTEGRITY) * 100)}%`;
-            finalLevel.textContent = Math.max(upgrades.lock, upgrades.key, upgrades.code);
-            
-            if (isVictory) {
-                outcomeMessage.textContent = "RESEARCH COMPLETE! Prometheus Secured! Humanity's future is safe thanks to your efforts.";
-                outcomeMessage.style.color = "#5eead4";
-                document.querySelector('.overlay-title').textContent = "Quantum Victory!";
-            } else {
-                outcomeMessage.textContent = "VAULT BREACHED! Prometheus Stolen! The Red Team has captured the superintelligence.";
-                outcomeMessage.style.color = "#ef4444";
-                document.querySelector('.overlay-title').textContent = "Breach Detected!";
+            } else if (enemy.frozen) {
+                enemy.frozen = false;
+                enemy.mesh.material.color.set(0xef4444); 
+                enemy.mesh.material.emissive.set(0xef4444);
             }
             
-            // Show overlay
-            gameOverlay.classList.add('visible');
-        }
-
-        function restartGame() {
-            // Reset game state
-            gameState = GAME_STATES.PLAYING;
-            researchProgress = 0;
-            vaultIntegrity = config.MAX_VAULT_INTEGRITY;
-            lastResearchTime = 0;
-            lastEnemySpawn = 0;
-            lastFreezeTime = 0;
-            freezeDuration = 0;
-            
-            // Reset upgrades
-            upgrades = { lock: 0, key: 0, code: 0 };
-            lockLevel.textContent = 'Level 0';
-            keyLevel.textContent = 'Level 0';
-            codeLevel.textContent = 'Level 0';
-            
-            // Reset player position
-            player.position.set(0, 1, 15);
-            player.rotation.y = 0;
-            
-            // Clear enemies
-            enemies.forEach(enemy => scene.remove(enemy.mesh));
-            enemies = [];
-            
-            // Reset labs
-            labs.forEach(lab => lab.lastVisit = 0);
-            
-            // Update UI
-            updateUI();
-            
-            // Hide overlay
-            gameOverlay.classList.remove('visible');
-        }
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        // Handle keyboard input
-        const keys = {};
-        window.addEventListener('keydown', e => {
-            keys[e.key.toLowerCase()] = true;
-            keys[e.key] = true;
-        });
-        window.addEventListener('keyup', e => {
-            keys[e.key.toLowerCase()] = false;
-            keys[e.key] = false;
-        });
-
-        // Set up mobile controls
-        function setupMobileControls() {
-            const btnUp = document.getElementById('btn-up');
-            const btnDown = document.getElementById('btn-down');
-            const btnLeft = document.getElementById('btn-left');
-            const btnRight = document.getElementById('btn-right');
-            
-            const setKeyState = (key, state) => {
-                keys[key] = state;
-            };
-            
-            // Touch events
-            btnUp.addEventListener('touchstart', () => setKeyState('up', true));
-            btnUp.addEventListener('touchend', () => setKeyState('up', false));
-            btnUp.addEventListener('touchcancel', () => setKeyState('up', false));
-            
-            btnDown.addEventListener('touchstart', () => setKeyState('down', true));
-            btnDown.addEventListener('touchend', () => setKeyState('down', false));
-            btnDown.addEventListener('touchcancel', () => setKeyState('down', false));
-            
-            btnLeft.addEventListener('touchstart', () => setKeyState('left', true));
-            btnLeft.addEventListener('touchend', () => setKeyState('left', false));
-            btnLeft.addEventListener('touchcancel', () => setKeyState('left', false));
-            
-            btnRight.addEventListener('touchstart', () => setKeyState('right', true));
-            btnRight.addEventListener('touchend', () => setKeyState('right', false));
-            btnRight.addEventListener('touchcancel', () => setKeyState('right', false));
-            
-            // Mouse events for desktop testing
-            btnUp.addEventListener('mousedown', () => setKeyState('up', true));
-            btnUp.addEventListener('mouseup', () => setKeyState('up', false));
-            btnUp.addEventListener('mouseleave', () => setKeyState('up', false));
-            
-            btnDown.addEventListener('mousedown', () => setKeyState('down', true));
-            btnDown.addEventListener('mouseup', () => setKeyState('down', false));
-            btnDown.addEventListener('mouseleave', () => setKeyState('down', false));
-            
-            btnLeft.addEventListener('mousedown', () => setKeyState('left', true));
-            btnLeft.addEventListener('mouseup', () => setKeyState('left', false));
-            btnLeft.addEventListener('mouseleave', () => setKeyState('left', false));
-            
-            btnRight.addEventListener('mousedown', () => setKeyState('right', true));
-            btnRight.addEventListener('mouseup', () => setKeyState('right', false));
-            btnRight.addEventListener('mouseleave', () => setKeyState('right', false));
-        }
-
-        // Animation loop
-        let lastTime = 0;
-        function animate(time) {
-            requestAnimationFrame(animate);
-            
-            // Calculate delta time in seconds
-            const delta = Math.min(0.1, (time - lastTime) / 1000);
-            lastTime = time;
-            
-            // Update game state
-            if (gameState === GAME_STATES.PLAYING) {
-                updatePlayer(delta);
-                updateEnemies(delta);
+            if (!enemy.frozen) {
+                const direction = new THREE.Vector3().subVectors(vault.position, enemy.mesh.position).normalize();
+                const currentSpeed = enemy.speed * (1 - Math.min(0.9, config.UPGRADE_EFFECTS.LOCK(upgrades.lock)));
+                enemy.mesh.position.add(direction.multiplyScalar(currentSpeed * delta));
                 
-                // Spawn enemies
-                if (time - lastEnemySpawn > config.ENEMY_SPAWN_INTERVAL) {
-                    spawnEnemy();
-                    lastEnemySpawn = time;
+                if (enemy.mesh.position.distanceTo(vault.position) < 3.5) { 
+                    const eliminateChance = Math.min(0.95, config.UPGRADE_EFFECTS.KEY(upgrades.key)); // Cap at 95%
+                    if (Math.random() > eliminateChance) {
+                        vaultIntegrity -= config.ENEMY_DAMAGE; 
+                        updateUI();
+                        
+                        if (vaultIntegrity <= 0) {
+                            vaultIntegrity = 0;
+                            endGame(false);
+                            return; 
+                        }
+                    }
+                    scene.remove(enemy.mesh);
+                    if(enemy.mesh.geometry) enemy.mesh.geometry.dispose(); // Dispose geometry
+                    if(enemy.mesh.material) enemy.mesh.material.dispose(); // Dispose material
+                    enemies.splice(i, 1);
+                    continue;
                 }
             }
-            
-            // Update camera to follow player
-            camera.position.x = player.position.x;
-            camera.position.z = player.position.z + 18; // Adjusted to show more of the play area
-            camera.lookAt(player.position.x, 0, player.position.z);
-            
-            // Render scene
-            renderer.render(scene, camera);
         }
+    }
 
-        // Initialize game
-        restartBtn.addEventListener('click', () => {
-            if (gameState === GAME_STATES.READY) {
-                gameState = GAME_STATES.PLAYING;
-                gameOverlay.classList.remove('visible');
-            } else {
-                restartGame();
+    function updateUI() {
+        const researchPercent = (researchProgress / config.MAX_RESEARCH) * 100;
+        researchBar.style.width = `${researchPercent}%`;
+        researchValue.textContent = `${researchProgress}/${config.MAX_RESEARCH}`;
+        
+        const integrityPercent = (vaultIntegrity / config.MAX_VAULT_INTEGRITY) * 100;
+        integrityBar.style.width = `${integrityPercent}%`;
+        integrityValue.textContent = `${vaultIntegrity}/${config.MAX_VAULT_INTEGRITY}`;
+    }
+
+    function endGame(isVictory) {
+        gameState = isVictory ? GAME_STATES.VICTORY : GAME_STATES.GAME_OVER;
+        
+        finalResearch.textContent = `${Math.round((researchProgress / config.MAX_RESEARCH) * 100)}%`;
+        finalIntegrity.textContent = `${Math.round((vaultIntegrity / config.MAX_VAULT_INTEGRITY) * 100)}%`;
+        finalLevel.textContent = Math.max(upgrades.lock, upgrades.key, upgrades.code);
+        
+        const titleElement = document.querySelector('#game-overlay .overlay-title');
+
+        if (isVictory) {
+            outcomeMessage.textContent = "RESEARCH COMPLETE! Prometheus Secured! Humanity's future is safe thanks to your efforts.";
+            outcomeMessage.style.color = "#5eead4";
+            if(titleElement) titleElement.textContent = "Quantum Victory!";
+        } else {
+            outcomeMessage.textContent = "VAULT BREACHED! Prometheus Stolen! The Red Team has captured the superintelligence.";
+            outcomeMessage.style.color = "#ef4444";
+            if(titleElement) titleElement.textContent = "Breach Detected!";
+        }
+        gameOverlay.classList.add('visible');
+    }
+
+    function restartGame() {
+        gameState = GAME_STATES.PLAYING;
+        researchProgress = 0;
+        vaultIntegrity = config.MAX_VAULT_INTEGRITY;
+        lastEnemySpawn = Date.now(); 
+        lastFreezeTime = 0;
+        freezeDuration = 0;
+        
+        upgrades = { lock: 0, key: 0, code: 0 };
+        lockLevel.textContent = 'Level 0';
+        keyLevel.textContent = 'Level 0';
+        codeLevel.textContent = 'Level 0';
+        
+        if(player) player.position.set(0, 1.1, 18); // Ensure player exists
+        if(player) player.rotation.y = 0;
+        
+        enemies.forEach(enemy => {
+            if (enemy.mesh) {
+                 scene.remove(enemy.mesh);
+                 if(enemy.mesh.geometry) enemy.mesh.geometry.dispose();
+                 if(enemy.mesh.material) enemy.mesh.material.dispose();
             }
         });
+        enemies = [];
+        
+        labs.forEach(lab => lab.lastVisit = 0);
 
-        // Start the game
-        window.addEventListener('load', () => {
-            initScene();
-            setupMobileControls();
-            updateUI();
-            gameOverlay.classList.add('visible');
+        if (activeLabIndicatorTimeout) {
+            clearTimeout(activeLabIndicatorTimeout);
+            activeLabIndicatorTimeout = null;
+        }
+        currentMessageSequence = [];
+        currentMessageIndex = 0;
+        messageDisplayEndTime = 0;
+        if (labIndicator) labIndicator.classList.remove('visible');
+        
+        updateUI();
+        gameOverlay.classList.remove('visible');
+    }
+
+    const keys = {};
+    window.addEventListener('keydown', e => {
+        keys[e.key.toLowerCase()] = true;
+    });
+    window.addEventListener('keyup', e => {
+        keys[e.key.toLowerCase()] = false;
+    });
+
+    function setupMobileControls() {
+        const buttons = [
+            { id: 'btn-up', key: 'up' }, { id: 'btn-down', key: 'down' },
+            { id: 'btn-left', key: 'left' }, { id: 'btn-right', key: 'right' }
+        ];
+        
+        const setKeyState = (key, state) => { keys[key] = state; };
+        
+        buttons.forEach(buttonConfig => {
+            const element = document.getElementById(buttonConfig.id);
+            if (element) {
+                element.addEventListener('touchstart', (event) => {
+                    event.preventDefault(); setKeyState(buttonConfig.key, true);
+                }, { passive: false });
+                element.addEventListener('touchend', () => setKeyState(buttonConfig.key, false));
+                element.addEventListener('touchcancel', () => setKeyState(buttonConfig.key, false));
+                
+                element.addEventListener('mousedown', () => setKeyState(buttonConfig.key, true));
+                element.addEventListener('mouseup', () => setKeyState(buttonConfig.key, false));
+                element.addEventListener('mouseleave', () => { if (keys[buttonConfig.key]) setKeyState(buttonConfig.key, false);});
+            }
         });
-    </script>
+    }
+    
+    // --- Single, Corrected animate function ---
+    let lastTime = 0; 
+    function animate(time) { 
+        requestAnimationFrame(animate);
+
+        const nowForEventTiming = Date.now(); 
+        // Use 'time' from requestAnimationFrame for smooth animation delta, it's usually a more precise DOMHighResTimeStamp
+        const delta = Math.min(0.1, (time - lastTime) / 1000) || 0.016; // Provide a fallback for delta if time is 0
+        lastTime = time;
+
+        if (gameState === GAME_STATES.PLAYING) {
+            updatePlayer(delta);
+            updateEnemies(delta);
+            
+            if (nowForEventTiming - lastEnemySpawn > config.ENEMY_SPAWN_INTERVAL) {
+                spawnEnemy();
+                lastEnemySpawn = nowForEventTiming;
+            }
+        }
+        
+        updateLabMessages(nowForEventTiming); 
+
+        if (vaultCore && vaultCore.material && vaultCore.material.emissive) {
+            let baseIntensity = 0.2; 
+            let minPulseIntensity = 0.1; 
+            const progressRatio = Math.min(1, researchProgress / config.MAX_RESEARCH);
+            const maxIntensityBoost = 1.8; 
+            let currentOverallMaxIntensity = baseIntensity + (progressRatio * maxIntensityBoost);
+
+            currentVaultEmissiveColor.lerpColors(VAULT_START_EMISSIVE_COLOR, VAULT_END_EMISSIVE_COLOR, progressRatio);
+            vaultCore.material.emissive.copy(currentVaultEmissiveColor);
+
+            let baseFrequency = 1.0; 
+            const maxAdditionalFrequency = 2.5; 
+            let currentFrequency = baseFrequency + (progressRatio * maxAdditionalFrequency);
+            
+            const pulseFactor = (Math.sin(time * 0.001 * currentFrequency * Math.PI * 2) + 1) / 2; 
+            
+            let targetIntensity = minPulseIntensity + pulseFactor * (currentOverallMaxIntensity - minPulseIntensity);
+            vaultCore.material.emissiveIntensity = Math.max(minPulseIntensity, targetIntensity); // Ensure it doesn't go below min
+        }
+        
+        if (player && camera && renderer) { // Ensure all are defined
+             camera.position.x = player.position.x;
+             camera.position.z = player.position.z + 22; // Camera distance from player
+             camera.position.y = 20; // Fixed camera height
+             camera.lookAt(player.position.x, player.position.y + 1, player.position.z); // Look slightly above player center
+             renderer.render(scene, camera);
+        }
+    }
+    // --- End of animate function ---
+
+    restartBtn.addEventListener('click', () => {
+        // No need to check gameState === GAME_STATES.READY, restartGame handles setup
+        restartGame(); 
+    });
+
+    window.addEventListener('load', () => {
+        initScene();
+        setupMobileControls();
+        updateUI(); // Initial UI state
+        gameOverlay.classList.add('visible'); // Show initial overlay
+    });
+</script>
 </body>
 </html>
