@@ -10,12 +10,12 @@
     <meta property="og:title" content="Quantum Defense - Mobile Game">
     <meta property="og:description" content="Defend the vault, upgrade quantum tech, and secure the superintelligence in this mobile-friendly browser game.">
     <meta property="og:type" content="website">
-    <meta property="og:image" content="https://www.cowboyprinter.com/wp-content/uploads/2025/05/artists-rendition.robot-protest.jpg">
+    <meta property="og:image" content="https://www.cowboyprinter.com/wp-content/uploads/2025/06/QUANTUM_DEFENSE_brand_product_shot.png">
     <meta property="og:url" content="https://cowboyprinter.github.io/TimeKey/">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Quantum Defense - Mobile Game">
     <meta name="twitter:description" content="Defend the vault and secure the superintelligence in this quantum-themed browser game.">
-    <meta name="twitter:image" content="https://www.cowboyprinter.com/wp-content/uploads/2023/03/Steampunk-Smart-Phone-Copy.gif">
+    <meta name="twitter:image" content="https://www.cowboyprinter.com/wp-content/uploads/2025/06/QUANTUM_DEFENSE_brand_product_shot.png">
     <!-- End SEO Meta Tags -->
         <title>Quantum Defense - Mobile</title>
 
@@ -164,22 +164,24 @@
         }
         
         #mobile-controls {
-            position: absolute;
-            bottom: 25px;
+            position: fixed;
+            bottom: 0px;
             left: 0;
-            width: 100%;
+            width: 100vw;
             display: flex;
             justify-content: center;
             z-index: 20;
-            padding: 0 20px;
+            padding: 0 20px 10px 20px;
             box-sizing: border-box;
-        }
-        
+            background: none; /* Optional: transparent background */
+
+        }   
+         
         #dpad-container {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             grid-template-rows: repeat(3, 1fr);
-            gap: -10px;
+            gap: 2px;
             width: 150px;
             height: 150px;
         }
@@ -372,6 +374,7 @@
         @supports (padding: max(0px)) {
             #mobile-controls {
                 bottom: max(25px, env(safe-area-inset-bottom));
+                position:fixed;
             }
             
             #ui-container {
