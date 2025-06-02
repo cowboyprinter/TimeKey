@@ -179,7 +179,7 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             grid-template-rows: repeat(3, 1fr);
-            gap: 10px;
+            gap: 3px;
             width: 160px;
             height: 160px;
         }
@@ -554,6 +554,7 @@
     </div>
 
     <script>
+        
         // Game constants and state
         const GAME_STATES = {
             READY: 0,
@@ -639,7 +640,15 @@
         const labIndicator = document.getElementById('lab-indicator');
 
         // Initialize Three.js scene
-        function initScene() {
+        function initScene() {// In your JavaScript, perhaps in initScene or onWindowResize
+        const gameContainer = document.getElementById('game-container');
+        function setGameContainerHeight() {
+            gameContainer.style.height = `${window.innerHeight}px`;
+        }
+        window.addEventListener('resize', setGameContainerHeight);
+        window.addEventListener('orientationchange', setGameContainerHeight); // Also on orientation change
+        setGameContainerHeight(); // Initial set
+        
             // Create scene
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x0c1527);
