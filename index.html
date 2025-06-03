@@ -427,7 +427,7 @@
             }
             
             .lab-indicator {
-                bottom: 150px;
+                bottom: 170px;
                 font-size: 13px;
             }
             
@@ -588,8 +588,8 @@
         ],
         [LAB_TYPES.KEY]: [
             "Creating Time Key...",
-            "Set Time Crystals...",
-            "Key stored in reverse time...",
+            "Analyzing Time Crystal...",
+            "Key locked in reverse time...",
             "Stand by...",
             "Report to Code Lab..."
         ],
@@ -604,7 +604,7 @@
     let currentMessageSequence = [];
     let currentMessageIndex = 0;
     let messageDisplayEndTime = 0;
-    const MESSAGE_DURATION = 2200; // ms (2.2 seconds per message for readability)
+    const MESSAGE_DURATION = 2000; // ms (2.2 seconds per message for readability)
     let activeLabIndicatorTimeout = 0; 
     // --- End of global message vars ---
 
@@ -617,16 +617,16 @@
     // Game configuration
     const config = {
         MAX_RESEARCH: 500, // Was 1000, 500 for faster testing
-        RESEARCH_PER_VISIT: 20, // Increased for faster testing of upgrades
+        RESEARCH_PER_VISIT: 15, // Increased for faster testing of upgrades
         RESEARCH_COOLDOWN: 3000, // ms, slightly shorter for testing
         MAX_VAULT_INTEGRITY: 500,
-        ENEMY_DAMAGE: 55,
+        ENEMY_DAMAGE: 75,
         ENEMY_SPAWN_INTERVAL: 1800, // Initial spawn interval
         ENEMY_SPEED_MIN: 0.1,
-        ENEMY_SPEED_MAX: 1.9,
+        ENEMY_SPEED_MAX: 2.3,
         UPGRADE_EFFECTS: {
-            LOCK: level => 0.10 * level, 
-            KEY: level => 0.11 * level, 
+            LOCK: level => 0.09 * level, 
+            KEY: level => 0.12 * level, 
             CODE: level => 0.18 * level 
         }
         // Config for second wave (will be added later if needed or integrated into enemy spawning)
